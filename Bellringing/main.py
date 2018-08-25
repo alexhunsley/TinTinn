@@ -6,7 +6,7 @@ import random
 bells = bimport('com.alexhunsley.bellringingsounds')
 
 rounds = "12345678"
-pn = ["x", "18", "x", "18","x", "18","x", "18","x", "18","x", "18","x", "18","x", "18"];
+pn = ["x", "18", "x", "18","x", "18","x", "18","x", "18","x", "18", "x", "18", "x", "12"];
 
 allBells = [bells.ripon03, bells.ripon04, bells.ripon05, 
             bells.ripon06, bells.ripon07, bells.ripon08, 
@@ -28,12 +28,97 @@ def doChange(str, placeNotation):
 
     return result
 
+class Method(agent.Agent):
+    def init(self):
+        self.handstroke = True
+        self.currChange = 0
+        self.doPause = False
+        self.pnOffset = 0
+
+        repsL = 6
+        reps = 4
+        self.changes = [rounds] * 2
+        print "initial self.changes = ", self.changes
+        lastChange = rounds
+
+        while True:
+            change = doChange(lastChange, pn[self.pnOffset])
+
+            self.changes.append(change)
+            if change == rounds:
+                break
+
+            print("Generated change: ", change)
+            lastChange = change
+
+            self.pnOffset += 1
+            if self.pnOffset == len(pn):
+                self.pnOffset = 0
+
+        print "MADE CHANGES: ", self.changes
+#        print "change count: ", len(self.changes)
+    
+    def run(self):
+        # print(doChange("12345678", "x"))
+        if (self.doPause):
+            self.resched(random.uniform(120, 240))
+            self.doPause = False
+            return
+
+        dlay = 0
+#        gap = 0.05
+        gap = 0.24
+        backstrokeLeadError = 0.025
+
+#        offsetErrorMax = 0.1                                                             
+        offsetErrorMax = 0.04
+
+#       print self.currChange
+#        print "ch(%d) = %s" % (self.currChange, self.changes[self.currChange])
+        print "currChange idx = ", self.currChange
+        print "currChange = ", self.changes[self.currChange]
+
+        for bellIdx in self.changes[self.currChange]:
+            schedOffsetError = random.uniform(-offsetErrorMax, offsetErrorMax)
+            schedDelay = dlay +schedOffsetError
+            if (schedDelay < 0):
+                schedDelay = 0
+
+            # print "ord = ", ord(bellIdx)
+
+            snd = allBells[2 + ord(bellIdx) - 49]
+            self.sched_note(snd, delay = schedDelay)
+            dlay += gap
+
+        if (not self.handstroke):
+            dlay += gap
+        else:
+            dlay + random.uniform(0, backstrokeLeadError)
+
+        self.handstroke = not self.handstroke
+        
+        self.currChange += 1
+
+        # print "before adding, dirn = ", self.changeCallDirection
+
+#         if (self.currChange == len(self.changes) - 1 and self.changeCallDirection == 1):
+# #           print "set to -"
+#             self.changeCallDirection = -1
+#         elif (self.currChange == 0 and self.changeCallDirection == -1):
+# #           print "set to +"
+#             self.changeCallDirection = 1
+#             self.doPause = True
+#         else:
+#             self.currChange += self.changeCallDirection
+
+        self.resched(dlay)
+
 
 class CallChanges(agent.Agent):
     def init(self):
         self.handstroke = True
         self.currChange = 0
-        self.doPause = True
+        self.doPause = False
 
         # start moving forwards through changes
         self.changeCallDirection = 1;
@@ -47,6 +132,7 @@ class CallChanges(agent.Agent):
 #        print "change count: ", len(self.changes)
     
     def run(self):
+        print(doChange("12345678", "x"))
         if (self.doPause):
             self.resched(random.uniform(120, 240))
             self.doPause = False
@@ -70,6 +156,8 @@ class CallChanges(agent.Agent):
                 schedDelay = 0
             #print "ord = ", ord(bellIdx)
             snd = allBells[2 + ord(bellIdx) - 49]
+
+            print("scheduling snd = ", snd)
             self.sched_note(snd, delay = schedDelay)
             dlay += gap
 
